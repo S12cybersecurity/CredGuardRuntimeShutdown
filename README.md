@@ -72,7 +72,3 @@ The account must exist on the target machine. `LogonUserA` creates the post-shut
 | `LogonUserA` + `OpenProcess(lsass, VM_READ)` in same process | EDR behavioral correlation |
 
 ---
-
-## Reference
-
-[Runtime Credential Guard Deactivation: From LsaIso.exe to LSASS Plaintext Hashes](https://medium.com/@s12deff)
